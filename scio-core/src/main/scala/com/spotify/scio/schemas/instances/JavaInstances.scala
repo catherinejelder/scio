@@ -24,6 +24,7 @@ import org.apache.beam.sdk.schemas.JavaBeanSchema
 import org.apache.beam.sdk.schemas.Schema.FieldType
 
 import scala.reflect.ClassTag
+import org.apache.beam.sdk.schemas.Schema.LogicalType
 
 trait JavaInstances {
 
@@ -68,5 +69,21 @@ trait JavaInstances {
 
   implicit def javaBeanSchema[T: IsJavaBean: ClassTag]: RawRecord[T] =
     RawRecord[T](new JavaBeanSchema())
+
+  import com.spotify.scio.util.ScioUtil
+  def enumType[E <: java.lang.Enum[E]: ClassTag] = new LogicalType[E, String] {
+    override def getIdentifier(): String = "Enum"
+
+    override def getBaseType(): FieldType = FieldType.STRING
+
+    override def toBaseType(input: E): String =
+      input.toString()
+
+    override def toInputType(base: String): E =
+      java.lang.Enum.valueOf(ScioUtil.classOf[E], base)
+  }
+
+  implicit def enumSchema[E <: java.lang.Enum[E]: ClassTag]: Type[E] =
+    Type[E](FieldType.logicalType(enumType))
 
 }
